@@ -377,7 +377,7 @@ int main(void) {
     clear_screen();
 
     
-    
+    int j = 5;
     // infinite loop
     while (1) {
         
@@ -407,10 +407,12 @@ int main(void) {
         //     }
         // }
 
-        for (int i = 5; i < 200; ++i) {
-            draw_circle(i, i, 9, circle9, rgb(255,174,66));
+        
+        draw_circle(j, j, 9, circle9, rgb(255,174,66));
+        ++j;
+        if (j == 200) {
+            j = 5;
         }
-
         wait_for_vsync();
 
         pixel_buffer_start = *(pixel_ctrl_ptr + 1);
