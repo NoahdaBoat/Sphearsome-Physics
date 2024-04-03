@@ -342,37 +342,37 @@ int main(void) {
 
 
     // info on the squares. x and y are of the top left (i.e. 0,0)
-    int squares_x[NUM_SQUARES];
-    int squares_y[NUM_SQUARES];
+    // int squares_x[NUM_SQUARES];
+    // int squares_y[NUM_SQUARES];
     // which direction to increment the position of the box by
-    int step_x[NUM_SQUARES];
-    int step_y[NUM_SQUARES];
-    short colour[NUM_SQUARES];
-    int square_size = BOX_SIZE; // BOX_SIZExBOX_SIZE square
+    // int step_x[NUM_SQUARES];
+    // int step_y[NUM_SQUARES];
+    // short colour[NUM_SQUARES];
+    // int square_size = BOX_SIZE; // BOX_SIZExBOX_SIZE square
 
     //setup the position of the boxes
-    for (unsigned int i = 0; i < NUM_SQUARES; ++i) {
-        // account for size of square
-        squares_x[i] = rand() % (320-BOX_SIZE);
-        squares_y[i] = rand() % (240-BOX_SIZE);
+    // for (unsigned int i = 0; i < NUM_SQUARES; ++i) {
+    //     // account for size of square
+    //     squares_x[i] = rand() % (320-BOX_SIZE);
+    //     squares_y[i] = rand() % (240-BOX_SIZE);
        
-        // get the starting step directions, 
-        // need to separate to ensure it won't move purely diagonally
-        if (rand() % 2) {
-            step_x[i] = 1;
-        }
-        else {
-            step_x[i] = -1;
-        }
-        // do the same for y
-        if (rand() % 2) {
-            step_y[i] = 1;
-        }
-        else {
-            step_y[i] = -1;
-        }
-        colour[i] = 0x001F; // blue box
-    }
+    //     // get the starting step directions, 
+    //     // need to separate to ensure it won't move purely diagonally
+    //     if (rand() % 2) {
+    //         step_x[i] = 1;
+    //     }
+    //     else {
+    //         step_x[i] = -1;
+    //     }
+    //     // do the same for y
+    //     if (rand() % 2) {
+    //         step_y[i] = 1;
+    //     }
+    //     else {
+    //         step_y[i] = -1;
+    //     }
+    //     colour[i] = 0x001F; // blue box
+    // }
 
     clear_screen();
 
@@ -383,31 +383,33 @@ int main(void) {
         
         clear_screen();
         
-        for (unsigned int i = 0; i < NUM_SQUARES; ++i) {
-            // connect the start of the line to the next box
-            // unless it is the last one, then connect it to the first
-            draw_box(squares_x[i], squares_y[i], colour);
-            if (i < NUM_SQUARES - 1) {   
-                draw_line((squares_x[i] + (BOX_SIZE/2) + 1), (squares_y[i] + (BOX_SIZE/2) + 1), (squares_x[i+1] + (BOX_SIZE/2) + 1), (squares_y[i+1] + (BOX_SIZE/2) + 1), colour[i]);
-            }
-            else {
-                draw_line((squares_x[i] + (BOX_SIZE/2) + 1), (squares_y[i] + (BOX_SIZE/2) + 1), (squares_x[0] + (BOX_SIZE/2) + 1), (squares_y[0] + (BOX_SIZE/2) + 1), colour[i]);
-            }
+        // for (unsigned int i = 0; i < NUM_SQUARES; ++i) {
+        //     // connect the start of the line to the next box
+        //     // unless it is the last one, then connect it to the first
+        //     draw_box(squares_x[i], squares_y[i], colour);
+        //     if (i < NUM_SQUARES - 1) {   
+        //         draw_line((squares_x[i] + (BOX_SIZE/2) + 1), (squares_y[i] + (BOX_SIZE/2) + 1), (squares_x[i+1] + (BOX_SIZE/2) + 1), (squares_y[i+1] + (BOX_SIZE/2) + 1), colour[i]);
+        //     }
+        //     else {
+        //         draw_line((squares_x[i] + (BOX_SIZE/2) + 1), (squares_y[i] + (BOX_SIZE/2) + 1), (squares_x[0] + (BOX_SIZE/2) + 1), (squares_y[0] + (BOX_SIZE/2) + 1), colour[i]);
+        //     }
             
-            // increment position
-            squares_x[i] += step_x[i];
-            squares_y[i] += step_y[i];
+        //     // // increment position
+        //     squares_x[i] += step_x[i];
+        //     squares_y[i] += step_y[i];
 
-            // check if the the step for each box needs to be changed
-            if (squares_x[i]+BOX_SIZE-1 >= 320 || squares_x[i] <= 0) {
-                step_x[i] *= -1;
-            }
-            if (squares_y[i]+BOX_SIZE-1 >= 240 || squares_y[i] <= 0) {
-                step_y[i] *= -1;
-            }
+        //     // check if the the step for each box needs to be changed
+        //     if (squares_x[i]+BOX_SIZE-1 >= 320 || squares_x[i] <= 0) {
+        //         step_x[i] *= -1;
+        //     }
+        //     if (squares_y[i]+BOX_SIZE-1 >= 240 || squares_y[i] <= 0) {
+        //         step_y[i] *= -1;
+        //     }
+        // }
+
+        for (int i = 5; i < 200; ++i) {
+            draw_circle(i, i, 9, circle9, rgb(255,174,66));
         }
-
-        draw_circle(100, 100, 9, circle9, rgb(255,174,66));
 
         wait_for_vsync();
 
