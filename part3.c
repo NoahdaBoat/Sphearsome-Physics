@@ -222,6 +222,9 @@ void update_gravity() {
 void check_bounds(int x_lim, int y_lim) {
 	for (short i = 0; i < num_objects; ++i) {
 		circle_object temp_obj = circles[i];
+        
+        // need to set the resultant movement vector after it touches a wall/floor/celing of the screen
+        // get the previous position of the object, flip it's direction, and multiply velocity by the coefficient of restitution
 		if (temp_obj.x > x_lim - temp_obj.radius) {
 			
 		}
@@ -230,7 +233,10 @@ void check_bounds(int x_lim, int y_lim) {
 		}
 		
 		if (temp_obj.y > y_lim - temp_obj.radius) {
-			
+			// float temp = temp_obj.y;
+            // temp_obj.y = temp_obj.y_prev;
+            // temp_obj.y_prev = temp;
+            
 		}
 		else if (temp_obj.y < 0 + temp_obj.radius) {
 			
@@ -340,7 +346,13 @@ int main(void) {
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);
     clear_screen();
 
-
+    circles[0].radius = 9;
+    circles[0].x = 10;
+    circles[0].y = 10;
+    circles[0].x_acc = 0;
+    circles[0].y_acc = GRAVITY_CONST;
+    circles[0].x_prev = 10;
+    circles[0].y_prev = 10;
     // info on the squares. x and y are of the top left (i.e. 0,0)
     // int squares_x[NUM_SQUARES];
     // int squares_y[NUM_SQUARES];
@@ -376,7 +388,7 @@ int main(void) {
 
     clear_screen();
 
-    
+    const int dt = 0.2;
     int j = 5;
     // infinite loop
     while (1) {
@@ -407,12 +419,16 @@ int main(void) {
         //     }
         // }
 
+
+        update_gravity();
+        check_bounds(320, 240);
+        update_dynamic(0.2, &circles[0]);
+
+
+        draw_circle(circles[0].x, circles[0].y, circles[0].radius, circle9, rgb(255,174,66));
         
-        draw_circle(j, j, 9, circle9, rgb(255,174,66));
-        ++j;
-        if (j == 200) {
-            j = 5;
-        }
+
+
         wait_for_vsync();
 
         pixel_buffer_start = *(pixel_ctrl_ptr + 1);
