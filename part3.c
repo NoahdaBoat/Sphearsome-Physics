@@ -6,7 +6,7 @@
 #define NUM_SQUARES 8
 #define BOX_SIZE 5
 #define VGA_SUBSYSTEM_VGA_PIXEL_DMA_BASE 0xff203020
-#define MAX_CIRCLES 1
+#define MAX_CIRCLES 2
 #define GRAVITY_CONST 10
 
 // iterate through all objects and resolve any collisions between them
@@ -26,6 +26,12 @@ volatile int* status_reg_global = (int*)0xFF20302C;  // global
 volatile int* ctrl_reg = (int*)0xFF203020;
 volatile int* ledPtr = (int*)0xFF200000;
 
+int circle9[9][9] = {{0, 0, 1, 1, 1, 1, 1, 0, 0}, {0, 1, 1, 1, 1, 1, 1, 1, 0},
+                     {1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1},
+                     {1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1},
+                     {1, 1, 1, 1, 1, 1, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1, 0},
+                     {0, 0, 1, 1, 1, 1, 1, 0, 0}};
+
 int res_offset;
 int col_offset;
 int screen_x;
@@ -39,9 +45,11 @@ typedef struct circle_object {
   float y;
   float x_prev;
   float y_prev;
+  float prev_x_acc;
   float x_acc;
   float y_acc;
   int radius;
+  bool stop;
 
 } circle_object;
 
@@ -215,8 +223,8 @@ void resolve_collisions_dynamic() {
 
 void update_gravity() {
   // update gravity on all objects
-  for (short i = 0; i < num_objects; ++i) {
-    circle_object *temp_obj = &circles[i];
+  for (short i = 0; i < MAX_CIRCLES; ++i) {
+    circle_object* temp_obj = &circles[i];
     temp_obj->x_acc = 0;
     temp_obj->y_acc = GRAVITY_CONST;
   }
@@ -224,34 +232,48 @@ void update_gravity() {
 
 void check_bounds(int x_lim, int y_lim) {
   bool out_of_bound = false;
-  for (short i = 0; i < num_objects; ++i) {
-    circle_object *temp_obj = &circles[i];
+  for (short i = 0; i < MAX_CIRCLES; ++i) {
+    circle_object* temp_obj = &circles[i];
 
     // need to set the resultant movement vector after it touches a
     // wall/floor/celing of the screen get the previous position of the object,
     // flip it's direction, and multiply velocity by the coefficient of
     // restitution
     if (temp_obj->x > x_lim - temp_obj->radius) {
-        //hit right wall
+      // hit right wall
       temp_obj->x_prev = temp_obj->x;
-      temp_obj->x = x_lim - temp_obj->radius-3;
-      accelerate_dynamic(-2, 0, temp_obj);
+      temp_obj->x = x_lim - temp_obj->radius;
+      temp_obj->x_acc=0;
+     if(temp_obj->prev_x_acc!=0){
+        accelerate_dynamic(temp_obj->prev_x_acc,0,temp_obj);
+      }
+      else{
+      accelerate_dynamic(8, 0, temp_obj);
+      }
+      temp_obj->prev_x_acc = temp_obj->x_acc;
 
     } else if (temp_obj->x < 0 + temp_obj->radius) {
-        //hit left wall
+      // hit left wall
       temp_obj->x_prev = temp_obj->x;
-      temp_obj->x = temp_obj->radius+3;
-      accelerate_dynamic(-2, 0, temp_obj);
+      temp_obj->x = temp_obj->radius;
+      temp_obj->x_acc=0;
+      if(temp_obj->prev_x_acc!=0){
+        accelerate_dynamic(temp_obj->prev_x_acc,0,temp_obj);
+      }
+      else{
+      accelerate_dynamic(-8, 0, temp_obj);
+      }
+      temp_obj->prev_x_acc = temp_obj->x_acc;
     }
-
     if (temp_obj->y > y_lim - temp_obj->radius) {
       temp_obj->y = temp_obj->y_prev;
-      temp_obj->y_prev = y_lim - temp_obj->radius-3;
+      temp_obj->y_prev = y_lim - temp_obj->radius - 3;
       accelerate_dynamic(0, -2, temp_obj);
+      *ledPtr = temp_obj->y_acc;
 
     } else if (temp_obj->y < 0 + temp_obj->radius) {
       temp_obj->y = temp_obj->y_prev;
-      temp_obj->y_prev = temp_obj->radius+3;
+      temp_obj->y_prev = temp_obj->radius + 3;
       accelerate_dynamic(0, -2, temp_obj);
     }
   }
@@ -269,8 +291,8 @@ void update_dynamic(float dt, circle_object* circle) {
   circle->x = circle->x + x_vel + circle->x_acc * (dt * dt);
   circle->y = circle->y + y_vel + circle->y_acc * (dt * dt);
 
-  circle->x_acc = 0;
-  circle->y_acc = 0;
+  //   circle->x_acc = 0;
+  //   circle->y_acc = 0;
 }
 
 // set the new acceleration of the object
@@ -317,16 +339,24 @@ int rgb(unsigned char r, unsigned char g, unsigned char b) {
   return result;
 }
 
+void update_all() {
+  update_gravity();
+  check_bounds(320, 240);
+  resolve_collisions_dynamic();
+  for (int i = 0; i < MAX_CIRCLES; i++) {
+    circle_object* temp_circ = &circles[i];
+    if (temp_circ->prev_x_acc != 0) {
+      accelerate_dynamic(temp_circ->prev_x_acc, 0, temp_circ);
+    }
+    update_dynamic(0.2, temp_circ);
+    draw_circle(temp_circ->x, temp_circ->y, 9, circle9, rgb(255, 174, 66));
+  }
+}
+
 int main(void) {
   // location of the front buffer
   volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
   volatile int* status_reg = (int*)0xFF20302C;
-
-  int circle9[9][9] = {{0, 0, 1, 1, 1, 1, 1, 0, 0}, {0, 1, 1, 1, 1, 1, 1, 1, 0},
-                       {1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1},
-                       {1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1},
-                       {1, 1, 1, 1, 1, 1, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1, 0},
-                       {0, 0, 1, 1, 1, 1, 1, 0, 0}};
 
   int db = 16;
 
@@ -363,6 +393,17 @@ int main(void) {
   circles[0].y_acc = GRAVITY_CONST;
   circles[0].x_prev = 10;
   circles[0].y_prev = 10;
+  circles[0].prev_x_acc = 0;
+  num_objects++;
+  circles[1].radius = 9;
+  circles[1].x = 50;
+  circles[1].y = 50;
+  circles[1].x_acc = 0;
+  circles[1].y_acc = GRAVITY_CONST;
+  circles[1].x_prev = 45;
+  circles[1].y_prev = 50;
+  circles[1].prev_x_acc = 0;
+
   num_objects++;
   // info on the squares. x and y are of the top left (i.e. 0,0)
   // int squares_x[NUM_SQUARES];
@@ -432,15 +473,7 @@ int main(void) {
     //         step_y[i] *= -1;
     //     }
     // }
-
-    update_gravity();
-
-    check_bounds(320, 240);
-
-    update_dynamic(0.2, &circles[0]);
-
-    draw_circle(circles[0].x, circles[0].y, circles[0].radius, circle9,
-                rgb(255, 174, 66));
+    update_all();
 
     wait_for_vsync();
 
