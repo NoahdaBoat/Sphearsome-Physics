@@ -181,41 +181,43 @@ void draw_circle(int x1, int y1, int size, int circle[size][size],
 // johnBuffer on GitHub
 void resolve_collisions_dynamic() {
   for (short i = 0; i < num_objects; ++i) {
-    circle_object obj1 = circles[i];
+    circle_object* obj1 = &circles[i];
 
     // get the second object to check against
     for (short j = i + 1; j < num_objects; ++j) {
-      circle_object obj2 = circles[j];
+      circle_object* obj2 = &circles[j];
 
       // components of the distance vector
-      const float diff_x = obj1.x - obj2.x;
-      const float diff_y = obj1.y - obj2.y;
+      const float diff_x = obj1->x - obj2->x;
+      const float diff_y = obj1->y - obj2->y;
       // distance between objects, accounting for
-      const float distance_diag = diff_x * diff_x + diff_y * diff_y;
+      const float distance_diag = (diff_x * diff_x) + (diff_y * diff_y);
       // the minimum separation needed to avoid a collision
-      const int req_sep = obj1.radius + obj2.radius;
+      const int req_sep = obj1->radius + obj2->radius;
 
       // Note: comparing distances squared is much quicker than the square
       // root'ed comparison
 
       // check if the objects are overlapping
-      if (distance_diag < req_sep * req_sep) {
+      if (distance_diag <= req_sep * req_sep) {
         // distances between objects after we determined they are overlapping
         const float act_distance = sqrtf(distance_diag);
         const float new_x = diff_x / act_distance;
         const float new_y = diff_y / act_distance;
 
         // mass ratios are used to determine the resulting direction vectors
-        const float mr_1 = obj1.radius / (obj1.radius + obj2.radius);
-        const float mr_2 = obj2.radius / (obj1.radius + obj2.radius);
+        // const float mr_1 = obj1->radius / (obj1->radius + obj2->radius);
+        // const float mr_2 = obj2->radius / (obj1->radius + obj2->radius);
         // change in position
-        const float chg_pos = 0.5f * c_of_rest * (act_distance - req_sep);
+        // const float chg_pos = 0.5f * c_of_rest * (act_distance - req_sep);
 
         // now we can update the positions
-        obj1.x -= new_x * (mr_2 * chg_pos);
-        obj1.y -= new_y * (mr_2 * chg_pos);
-        obj2.x += new_x * (mr_1 * chg_pos);
-        obj2.y += new_y * (mr_1 * chg_pos);
+        float delta = act_distance - req_sep;
+        obj1->x += new_x * 0.5F * delta;
+        obj1->y += new_y * 0.5f * delta;
+        obj2->x -= new_x * 0.5f * delta;
+        obj2->y -= new_y * 0.5f * delta;
+        *ledPtr = obj1->x;
       }
     }
   }
@@ -243,12 +245,11 @@ void check_bounds(int x_lim, int y_lim) {
       // hit right wall
       temp_obj->x_prev = temp_obj->x;
       temp_obj->x = x_lim - temp_obj->radius;
-      temp_obj->x_acc=0;
-     if(temp_obj->prev_x_acc!=0){
-        accelerate_dynamic(temp_obj->prev_x_acc,0,temp_obj);
-      }
-      else{
-      accelerate_dynamic(8, 0, temp_obj);
+      temp_obj->x_acc = 0;
+      if (temp_obj->prev_x_acc != 0) {
+        accelerate_dynamic(temp_obj->prev_x_acc, 0, temp_obj);
+      } else {
+        accelerate_dynamic(8, 0, temp_obj);
       }
       temp_obj->prev_x_acc = temp_obj->x_acc;
 
@@ -256,12 +257,11 @@ void check_bounds(int x_lim, int y_lim) {
       // hit left wall
       temp_obj->x_prev = temp_obj->x;
       temp_obj->x = temp_obj->radius;
-      temp_obj->x_acc=0;
-      if(temp_obj->prev_x_acc!=0){
-        accelerate_dynamic(temp_obj->prev_x_acc,0,temp_obj);
-      }
-      else{
-      accelerate_dynamic(-8, 0, temp_obj);
+      temp_obj->x_acc = 0;
+      if (temp_obj->prev_x_acc != 0) {
+        accelerate_dynamic(temp_obj->prev_x_acc, 0, temp_obj);
+      } else {
+        accelerate_dynamic(-8, 0, temp_obj);
       }
       temp_obj->prev_x_acc = temp_obj->x_acc;
     }
@@ -341,8 +341,8 @@ int rgb(unsigned char r, unsigned char g, unsigned char b) {
 
 void update_all() {
   update_gravity();
-  check_bounds(320, 240);
   resolve_collisions_dynamic();
+  check_bounds(320, 240);
   for (int i = 0; i < MAX_CIRCLES; i++) {
     circle_object* temp_circ = &circles[i];
     if (temp_circ->prev_x_acc != 0) {
@@ -387,21 +387,21 @@ int main(void) {
   clear_screen();
 
   circles[0].radius = 9;
-  circles[0].x = 10;
+  circles[0].x = 20;
   circles[0].y = 10;
   circles[0].x_acc = 0;
   circles[0].y_acc = GRAVITY_CONST;
-  circles[0].x_prev = 10;
+  circles[0].x_prev = 15;
   circles[0].y_prev = 10;
   circles[0].prev_x_acc = 0;
   num_objects++;
   circles[1].radius = 9;
-  circles[1].x = 50;
-  circles[1].y = 50;
+  circles[1].x = 300;
+  circles[1].y = 10;
   circles[1].x_acc = 0;
   circles[1].y_acc = GRAVITY_CONST;
-  circles[1].x_prev = 45;
-  circles[1].y_prev = 50;
+  circles[1].x_prev = 305;
+  circles[1].y_prev = 10;
   circles[1].prev_x_acc = 0;
 
   num_objects++;
