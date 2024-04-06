@@ -19,7 +19,11 @@ void update_all();
 
 void update_gravity();
 
-void check_bounds(int x_lim, int y_lim);
+void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max);
+
+void check_stopped(int index);
+
+bool check_game_status(int x_lim1,int x_lim2, int y_lim1, int y_lim2);
 
 volatile int pixel_buffer_start;                     // global variable
 volatile int* status_reg_global = (int*)0xFF20302C;  // global
@@ -36,6 +40,7 @@ int res_offset;
 int col_offset;
 int screen_x;
 int screen_y;
+bool game_status;
 
 // Thanks to johnBuffer on GitHub for the inspiration in this struct and
 // collision resolution
@@ -48,6 +53,9 @@ typedef struct circle_object {
   float prev_x_acc;
   float x_acc;
   float y_acc;
+  float y_end;
+  float x_end;
+  bool stopped;
   int radius;
   bool stop;
 
@@ -205,19 +213,15 @@ void resolve_collisions_dynamic() {
         const float new_x = diff_x / act_distance;
         const float new_y = diff_y / act_distance;
 
-        // mass ratios are used to determine the resulting direction vectors
-        // const float mr_1 = obj1->radius / (obj1->radius + obj2->radius);
-        // const float mr_2 = obj2->radius / (obj1->radius + obj2->radius);
         // change in position
-        // const float chg_pos = 0.5f * c_of_rest * (act_distance - req_sep);
+        float move_dist = act_distance - req_sep;
 
         // now we can update the positions
-        float delta = act_distance - req_sep;
-        obj1->x += new_x * 0.5F * delta;
-        obj1->y += new_y * 0.5f * delta;
-        obj2->x -= new_x * 0.5f * delta;
-        obj2->y -= new_y * 0.5f * delta;
-        *ledPtr = obj1->x;
+        obj1->x += new_x * 0.5F * move_dist;
+        obj1->y += new_y * 0.5f * move_dist;
+        obj2->x -= new_x * 0.5f * move_dist;
+        obj2->y -= new_y * 0.5f * move_dist;
+      
       }
     }
   }
@@ -232,8 +236,7 @@ void update_gravity() {
   }
 }
 
-void check_bounds(int x_lim, int y_lim) {
-  bool out_of_bound = false;
+void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max) {
   for (short i = 0; i < MAX_CIRCLES; ++i) {
     circle_object* temp_obj = &circles[i];
 
@@ -241,10 +244,10 @@ void check_bounds(int x_lim, int y_lim) {
     // wall/floor/celing of the screen get the previous position of the object,
     // flip it's direction, and multiply velocity by the coefficient of
     // restitution
-    if (temp_obj->x > x_lim - temp_obj->radius) {
+    if (temp_obj->x > x_lim_max - temp_obj->radius) {
       // hit right wall
       temp_obj->x_prev = temp_obj->x;
-      temp_obj->x = x_lim - temp_obj->radius;
+      temp_obj->x = x_lim_max - temp_obj->radius;
       temp_obj->x_acc = 0;
       if (temp_obj->prev_x_acc != 0) {
         accelerate_dynamic(temp_obj->prev_x_acc, 0, temp_obj);
@@ -253,10 +256,10 @@ void check_bounds(int x_lim, int y_lim) {
       }
       temp_obj->prev_x_acc = temp_obj->x_acc;
 
-    } else if (temp_obj->x < 0 + temp_obj->radius) {
+    } else if (temp_obj->x < x_lim_min + temp_obj->radius) {
       // hit left wall
       temp_obj->x_prev = temp_obj->x;
-      temp_obj->x = temp_obj->radius;
+      temp_obj->x = x_lim_min+ temp_obj->radius;
       temp_obj->x_acc = 0;
       if (temp_obj->prev_x_acc != 0) {
         accelerate_dynamic(temp_obj->prev_x_acc, 0, temp_obj);
@@ -265,15 +268,14 @@ void check_bounds(int x_lim, int y_lim) {
       }
       temp_obj->prev_x_acc = temp_obj->x_acc;
     }
-    if (temp_obj->y > y_lim - temp_obj->radius) {
+    if (temp_obj->y > y_lim_max - temp_obj->radius) {
       temp_obj->y = temp_obj->y_prev;
-      temp_obj->y_prev = y_lim - temp_obj->radius - 3;
+      temp_obj->y_prev = y_lim_max - temp_obj->radius - 3;
       accelerate_dynamic(0, -2, temp_obj);
-      *ledPtr = temp_obj->y_acc;
 
-    } else if (temp_obj->y < 0 + temp_obj->radius) {
+    } else if (temp_obj->y < y_lim_min + temp_obj->radius) {
       temp_obj->y = temp_obj->y_prev;
-      temp_obj->y_prev = temp_obj->radius + 3;
+      temp_obj->y_prev = y_lim_min + temp_obj->radius + 3;
       accelerate_dynamic(0, -2, temp_obj);
     }
   }
@@ -291,8 +293,6 @@ void update_dynamic(float dt, circle_object* circle) {
   circle->x = circle->x + x_vel + circle->x_acc * (dt * dt);
   circle->y = circle->y + y_vel + circle->y_acc * (dt * dt);
 
-  //   circle->x_acc = 0;
-  //   circle->y_acc = 0;
 }
 
 // set the new acceleration of the object
@@ -330,19 +330,14 @@ int rgb(unsigned char r, unsigned char g, unsigned char b) {
 
   int result = (red << (5 + 6)) | (green << 5) | blue;
 
-  // tests
-  //  printf("red: %x\n", red);
-  //  printf("green: %x\n", green);
-  //  printf("blue: %x\n", blue);
-  //  printf("result: %x\n", result);
-
   return result;
 }
 
 void update_all() {
   update_gravity();
   resolve_collisions_dynamic();
-  check_bounds(320, 240);
+  check_bounds(270,319,0,239);
+  check_bounds(0,320,0,240);
   for (int i = 0; i < MAX_CIRCLES; i++) {
     circle_object* temp_circ = &circles[i];
     if (temp_circ->prev_x_acc != 0) {
@@ -350,13 +345,53 @@ void update_all() {
     }
     update_dynamic(0.2, temp_circ);
     draw_circle(temp_circ->x, temp_circ->y, 9, circle9, rgb(255, 174, 66));
+    check_stopped(i);
   }
+   draw_line(319,239,270,239, rgb(255, 174, 66));
+   draw_line(270,239,270,200, rgb(255, 174, 66));
+   draw_line (319,200,319,239, rgb(255, 174, 66));
 }
+
+// return true if the object has stopped and modify x_end and y_end to the ending position of the circle
+void check_stopped(int index){
+      circle_object * temp = &circles[index];
+      if((temp->x == temp->x_prev) && temp->y == (temp->y_prev)){
+        temp->x_end = temp->x;
+        temp->y_end = temp->y;
+        temp->stopped = true;
+        *ledPtr += 1;
+      }
+      else{
+        temp->stopped = false;
+         *ledPtr += 1;
+      }
+    }
+
+
+// return true if all the balls are within the bounds
+// should only be called after all the balls are stopped
+bool check_game_status(int x_min,int x_max, int y_min, int y_max){
+      bool status = true;
+      for(int i = 1; i < MAX_CIRCLES; i++){
+        circle_object temp = circles[i];
+        bool temp_status;
+      if(temp.x_end > x_min && temp.x_end < x_max && temp.y_end > y_min && temp.y_end < y_max){
+        temp_status = true;
+      }
+      else{
+        temp_status = false;
+      }
+      status = status & temp_status;
+      }
+      return status;
+}
+
 
 int main(void) {
   // location of the front buffer
   volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
   volatile int* status_reg = (int*)0xFF20302C;
+  bool game_over = false;
 
   int db = 16;
 
@@ -386,6 +421,8 @@ int main(void) {
   pixel_buffer_start = *(pixel_ctrl_ptr + 1);
   clear_screen();
 
+  
+
   circles[0].radius = 9;
   circles[0].x = 20;
   circles[0].y = 10;
@@ -396,86 +433,43 @@ int main(void) {
   circles[0].prev_x_acc = 0;
   num_objects++;
   circles[1].radius = 9;
-  circles[1].x = 300;
+  circles[1].x = 319;
   circles[1].y = 10;
   circles[1].x_acc = 0;
   circles[1].y_acc = GRAVITY_CONST;
-  circles[1].x_prev = 305;
+  circles[1].x_prev = 320;
   circles[1].y_prev = 10;
   circles[1].prev_x_acc = 0;
 
   num_objects++;
-  // info on the squares. x and y are of the top left (i.e. 0,0)
-  // int squares_x[NUM_SQUARES];
-  // int squares_y[NUM_SQUARES];
-  // which direction to increment the position of the box by
-  // int step_x[NUM_SQUARES];
-  // int step_y[NUM_SQUARES];
-  // short colour[NUM_SQUARES];
-  // int square_size = BOX_SIZE; // BOX_SIZExBOX_SIZE square
-
-  // setup the position of the boxes
-  //  for (unsigned int i = 0; i < NUM_SQUARES; ++i) {
-  //      // account for size of square
-  //      squares_x[i] = rand() % (320-BOX_SIZE);
-  //      squares_y[i] = rand() % (240-BOX_SIZE);
-
-  //     // get the starting step directions,
-  //     // need to separate to ensure it won't move purely diagonally
-  //     if (rand() % 2) {
-  //         step_x[i] = 1;
-  //     }
-  //     else {
-  //         step_x[i] = -1;
-  //     }
-  //     // do the same for y
-  //     if (rand() % 2) {
-  //         step_y[i] = 1;
-  //     }
-  //     else {
-  //         step_y[i] = -1;
-  //     }
-  //     colour[i] = 0x001F; // blue box
-  // }
-
+   
   clear_screen();
+  *ledPtr = 0;
 
   const int dt = 0.2;
-  int j = 5;
   // infinite loop
   while (1) {
     clear_screen();
-
-    // for (unsigned int i = 0; i < NUM_SQUARES; ++i) {
-    //     // connect the start of the line to the next box
-    //     // unless it is the last one, then connect it to the first
-    //     draw_box(squares_x[i], squares_y[i], colour);
-    //     if (i < NUM_SQUARES - 1) {
-    //         draw_line((squares_x[i] + (BOX_SIZE/2) + 1), (squares_y[i] +
-    //         (BOX_SIZE/2) + 1), (squares_x[i+1] + (BOX_SIZE/2) + 1),
-    //         (squares_y[i+1] + (BOX_SIZE/2) + 1), colour[i]);
-    //     }
-    //     else {
-    //         draw_line((squares_x[i] + (BOX_SIZE/2) + 1), (squares_y[i] +
-    //         (BOX_SIZE/2) + 1), (squares_x[0] + (BOX_SIZE/2) + 1),
-    //         (squares_y[0] + (BOX_SIZE/2) + 1), colour[i]);
-    //     }
-
-    //     // // increment position
-    //     squares_x[i] += step_x[i];
-    //     squares_y[i] += step_y[i];
-
-    //     // check if the the step for each box needs to be changed
-    //     if (squares_x[i]+BOX_SIZE-1 >= 320 || squares_x[i] <= 0) {
-    //         step_x[i] *= -1;
-    //     }
-    //     if (squares_y[i]+BOX_SIZE-1 >= 240 || squares_y[i] <= 0) {
-    //         step_y[i] *= -1;
-    //     }
-    // }
+    
     update_all();
 
     wait_for_vsync();
+
+    int i;
+    for(i = 1; i < MAX_CIRCLES; i++){
+      if(!circles[i].stopped){
+        break;
+      }
+    }
+    //i == MAX_CIRClES iff all circles are stoppped
+    if(i == MAX_CIRCLES){
+      if(check_game_status(270,319,200,270)){
+        *ledPtr = 1;
+      }
+      else{
+        *ledPtr = 2;
+      }
+    }
 
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);
   }
