@@ -58,6 +58,7 @@ typedef struct circle_object {
   bool stopped;
   int radius;
   bool stop;
+  // bool added_acc;// always init to false
 
 } circle_object;
 
@@ -221,7 +222,17 @@ void resolve_collisions_dynamic() {
         obj1->y += new_y * 0.5f * move_dist;
         obj2->x -= new_x * 0.5f * move_dist;
         obj2->y -= new_y * 0.5f * move_dist;
-      
+
+        if(new_x > 0){
+          //object 1 goes right
+          accelerate_dynamic(-8,0,obj1);
+          accelerate_dynamic(8,0,obj2);
+        }
+        else{
+          accelerate_dynamic(8,0,obj1);
+          accelerate_dynamic(-8,0,obj2);
+        }
+       
       }
     }
   }
@@ -249,11 +260,7 @@ void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max) {
       temp_obj->x_prev = temp_obj->x;
       temp_obj->x = x_lim_max - temp_obj->radius;
       temp_obj->x_acc = 0;
-      if (temp_obj->prev_x_acc != 0) {
-        accelerate_dynamic(temp_obj->prev_x_acc, 0, temp_obj);
-      } else {
-        accelerate_dynamic(8, 0, temp_obj);
-      }
+      accelerate_dynamic(8, 0, temp_obj);
       temp_obj->prev_x_acc = temp_obj->x_acc;
 
     } else if (temp_obj->x < x_lim_min + temp_obj->radius) {
@@ -261,11 +268,7 @@ void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max) {
       temp_obj->x_prev = temp_obj->x;
       temp_obj->x = x_lim_min+ temp_obj->radius;
       temp_obj->x_acc = 0;
-      if (temp_obj->prev_x_acc != 0) {
-        accelerate_dynamic(temp_obj->prev_x_acc, 0, temp_obj);
-      } else {
-        accelerate_dynamic(-8, 0, temp_obj);
-      }
+      accelerate_dynamic(-8, 0, temp_obj);
       temp_obj->prev_x_acc = temp_obj->x_acc;
     }
     if (temp_obj->y > y_lim_max - temp_obj->radius) {
@@ -281,6 +284,7 @@ void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max) {
   }
 }
 
+
 // update the position of this circle
 void update_dynamic(float dt, circle_object* circle) {
   const float x_vel = circle->x - circle->x_prev;
@@ -288,11 +292,9 @@ void update_dynamic(float dt, circle_object* circle) {
 
   circle->x_prev = circle->x;
   circle->y_prev = circle->y;
-
   // Verlet Integration
   circle->x = circle->x + x_vel + circle->x_acc * (dt * dt);
   circle->y = circle->y + y_vel + circle->y_acc * (dt * dt);
-
 }
 
 // set the new acceleration of the object
@@ -336,7 +338,7 @@ int rgb(unsigned char r, unsigned char g, unsigned char b) {
 void update_all() {
   update_gravity();
   resolve_collisions_dynamic();
-  check_bounds(270,319,0,239);
+  //check_bounds(200,319,0,239);
   check_bounds(0,320,0,240);
   for (int i = 0; i < MAX_CIRCLES; i++) {
     circle_object* temp_circ = &circles[i];
@@ -355,15 +357,13 @@ void update_all() {
 // return true if the object has stopped and modify x_end and y_end to the ending position of the circle
 void check_stopped(int index){
       circle_object * temp = &circles[index];
-      if((temp->x == temp->x_prev) && temp->y == (temp->y_prev)){
+      if(((int)temp->x == (int)temp->x_prev) && (int)temp->y ==(int)(temp->y_prev)){
         temp->x_end = temp->x;
         temp->y_end = temp->y;
         temp->stopped = true;
-        *ledPtr += 1;
       }
       else{
         temp->stopped = false;
-         *ledPtr += 1;
       }
     }
 
@@ -424,20 +424,20 @@ int main(void) {
   
 
   circles[0].radius = 9;
-  circles[0].x = 20;
+  circles[0].x = 0;
   circles[0].y = 10;
   circles[0].x_acc = 0;
   circles[0].y_acc = GRAVITY_CONST;
-  circles[0].x_prev = 15;
+  circles[0].x_prev = 0;
   circles[0].y_prev = 10;
   circles[0].prev_x_acc = 0;
   num_objects++;
   circles[1].radius = 9;
-  circles[1].x = 319;
+  circles[1].x = 100;
   circles[1].y = 10;
   circles[1].x_acc = 0;
   circles[1].y_acc = GRAVITY_CONST;
-  circles[1].x_prev = 320;
+  circles[1].x_prev = 100;
   circles[1].y_prev = 10;
   circles[1].prev_x_acc = 0;
 
@@ -467,7 +467,7 @@ int main(void) {
         *ledPtr = 1;
       }
       else{
-        *ledPtr = 2;
+        *ledPtr = 0;
       }
     }
 
