@@ -61,8 +61,8 @@ typedef struct circle_object {
   float y_acc;
   float y_end;
   float x_end;
-  bool stopped;
-  bool stopping;
+  bool stopped; // if the ball has stopped
+  bool stopping; // if the ball should be stopped when the velocity changes sign
   int radius;
   // bool added_acc;// always init to false
 
@@ -266,7 +266,7 @@ void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max) {
       temp_obj->x_acc = 0;
       accelerate_dynamic(9, 0, temp_obj);
       temp_obj->prev_x_acc = temp_obj->x_acc;
-      temp_obj ->stopping = true;
+      temp_obj ->stopping = true; 
 
     } else if (temp_obj->x < x_lim_min + temp_obj->radius) {
       // hit left wall
@@ -291,6 +291,7 @@ void check_bounds(int x_lim_min, int x_lim_max, int y_lim_min, int y_lim_max) {
 }
 
 void capture_ball() {
+  // when the ball enters the region of the end zone, disable changes in x direction and only apply gravity
   for (int i = 1; i < MAX_CIRCLES; i++) {
     circle_object* temp = &circles[i];
     if (temp->x > box_x1 && temp->x < box_x2 && temp->y > box_y1 &&
@@ -512,3 +513,5 @@ int main(void) {
   }
   return 0;
 }
+
+
