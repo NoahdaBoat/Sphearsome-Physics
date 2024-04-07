@@ -457,7 +457,7 @@ int main(void) {
   circles[1].y_prev = 10;
   circles[1].prev_x_acc = 0;
   circles[1].stopped = false;
-  circles[1].stopping = true;
+  circles[1].stopping = false;
   num_objects++;
   circles[0].radius = 9;
   circles[0].x = 100;
