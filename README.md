@@ -1,4 +1,5 @@
-# Lanlin He, Noah Monti - "Sphearsome Physics"
+# "Sphearsome Physics"
+## Lanlin He, Noah Monti
 ## April 8th, 2024 
 ## ECE243, University of Toronto
 
