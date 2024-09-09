@@ -26,6 +26,12 @@ To change levels or move to the home screen, click the "Exit" button at any time
 
 If you want to re-read the instructions, the "Instructions" button take you to a screen that has the game description. To leave the game, click the "Quit" button.
 
+
+
+
+
+
+
 ### Detalis:
 
 | Item | Description |
