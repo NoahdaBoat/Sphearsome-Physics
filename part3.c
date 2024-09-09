@@ -39,11 +39,14 @@ typedef struct circle_object {
 	float x_acc;
 	float y_acc;
 	int radius;
+    int mass;
 
 } circle_object;
 
 /* For circle objects (game object) */
 const float c_of_rest = 0.8f;
+const int force_x = 0;
+const int force_y = 10;
 int num_objects = 0;
 float game_time = 0;
 float time_step = 0;
@@ -215,31 +218,37 @@ void update_gravity() {
 	for (short i = 0; i < num_objects; ++i) {
 		circle_object temp_obj = circles[i];
 		temp_obj.x_acc = 0;
-		temp_obj.y_acc = GRAVITY_CONST;
+		//temp_obj.y_acc = GRAVITY_CONST;
+        temp_obj.y_acc = force_y / temp_obj.mass;
 	}
 }
 
 void check_bounds(int x_lim, int y_lim) {
-	for (short i = 0; i < num_objects; ++i) {
-		circle_object temp_obj = circles[i];
+    for (short i = 0; i < num_objects; ++i) {
+		circle_object* temp_obj = &circles[i];
         
         // need to set the resultant movement vector after it touches a wall/floor/celing of the screen
         // get the previous position of the object, flip it's direction, and multiply velocity by the coefficient of restitution
-		if (temp_obj.x > x_lim - temp_obj.radius) {
+		if (temp_obj->x > x_lim - temp_obj->radius) {
 			
 		}
-		else if (temp_obj.x < 0 + temp_obj.radius) {
+		else if (temp_obj->x < 0 + temp_obj->radius) {
 				
 		}
 		
-		if (temp_obj.y > y_lim - temp_obj.radius) {
-			// float temp = temp_obj.y;
-            // temp_obj.y = temp_obj.y_prev;
-            // temp_obj.y_prev = temp;
-            
+		if (temp_obj->y > y_lim - temp_obj->radius) {
+            float temp = temp_obj->y;
+            temp_obj->y = temp_obj->y_prev;
+            temp_obj->y_prev = temp;
+            temp_obj->y_acc = c_of_rest * GRAVITY_CONST;
+            // temp_obj->y = y_lim + temp_obj->radius;
+            // temp_obj->y_prev = y_lim;
 		}
-		else if (temp_obj.y < 0 + temp_obj.radius) {
-			
+		else if (temp_obj->y < 0) {
+            float temp = temp_obj->y;
+            temp_obj->y = temp_obj->y_prev;
+            temp_obj->y_prev = temp;
+            temp_obj->y_acc = c_of_rest * GRAVITY_CONST * -1;
 		}
 	}
 }
@@ -258,6 +267,37 @@ void update_dynamic(float dt, circle_object* circle) {
 
     circle->x_acc = 0;
     circle->y_acc = 0;
+}
+
+void update2(float dt, circle_object* circle) {
+    const float vel_x = circle->x - circle->x_prev;
+    const float vel_y = circle->y - circle->y_prev;
+
+    circle->x_prev = circle->x;
+    circle->y_prev = circle->y;
+
+    // Estimate the new position using Verlet integration
+    circle->x += vel_x + circle->x_acc * dt*dt;
+    circle->y += vel_y + circle->y_acc * dt*dt;
+}
+
+void constrain(circle_object* circle) {
+    const float vel_x = circle->x - circle->x_prev;
+    const float vel_y = circle->y - circle->y_prev;
+    
+    if (circle->x < 0) {
+      circle->x = 0;
+      circle->x_prev = circle->x + vel_x;
+    } else if (circle->x > screen_x) {
+      circle->x = screen_x-9;
+      circle->x_prev = circle->x + vel_x;
+    } else if (circle->y < 0) {
+      circle->y = 0;
+      circle->y_prev = circle->y + vel_y;
+    } else if (circle->y > screen_y) {
+      circle->y = screen_y-9;
+      circle->y_prev = circle->y + vel_y;
+    }
 }
 
 // set the new acceleration of the object
@@ -345,14 +385,15 @@ int main(void) {
     *(pixel_ctrl_ptr + 1) = (int)&Buffer2;
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);
     clear_screen();
-
     circles[0].radius = 9;
     circles[0].x = 10;
     circles[0].y = 10;
-    circles[0].x_acc = 0;
-    circles[0].y_acc = GRAVITY_CONST;
     circles[0].x_prev = 10;
-    circles[0].y_prev = 10;
+    circles[0].y_prev = 0;
+    circles[0].mass = 1;
+    circles[0].x_acc = force_x / circles[0].mass;
+    circles[0].y_acc = force_y / circles[0].mass;
+    num_objects++;
     // info on the squares. x and y are of the top left (i.e. 0,0)
     // int squares_x[NUM_SQUARES];
     // int squares_y[NUM_SQUARES];
@@ -388,8 +429,8 @@ int main(void) {
 
     clear_screen();
 
-    const int dt = 0.2;
-    int j = 5;
+    const int dt = 0.02;
+    //int j = 5;
     // infinite loop
     while (1) {
         
@@ -420,12 +461,11 @@ int main(void) {
         // }
 
 
+        //update2(dt, &circles[0]);
         update_gravity();
-        check_bounds(320, 240);
-        update_dynamic(0.2, &circles[0]);
-
-
-        draw_circle(circles[0].x, circles[0].y, circles[0].radius, circle9, rgb(255,174,66));
+        constrain(&circles[0]);
+        update_dynamic(dt, &circles[0]);
+        draw_circle((int)circles[0].x, (int)circles[0].y, circles[0].radius, circle9, rgb(255,174,66));
         
 
 
