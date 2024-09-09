@@ -30,7 +30,7 @@ If you want to re-read the instructions, the "Instructions" button take you to a
 
 
 
-https://github.com/user-attachments/assets/8dd0ed2e-ff49-46ff-b33c-4f4e96ad042d
+[![Watch the video]](https://github.com/NoahdaBoat/Sphearsome-Physics/blob/main/demo-video.mp4)
 
 
 
